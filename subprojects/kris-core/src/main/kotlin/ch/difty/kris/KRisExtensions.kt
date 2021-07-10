@@ -1,13 +1,16 @@
-@file:Suppress("SpellCheckingInspection")
+@file:Suppress("SpellCheckingInspection", "RedundantVisibilityModifier")
 
 package ch.difty.kris
 
 import ch.difty.kris.domain.RisRecord
 import ch.difty.kris.domain.RisTag
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.produceIn
@@ -37,22 +40,8 @@ public fun List<String>.toRisRecords(): List<RisRecord> = KRis.processList(this)
  */
 @FlowPreview
 @ExperimentalCoroutinesApi
-public fun Sequence<String>.toRisRecords(): Sequence<RisRecord> {
-    val lineFlow = this.asFlow()
-    return sequence {
-        val channel = KRis.process(lineFlow).produceIn(GlobalScope)
-
-        try {
-            while (!channel.isClosedForReceive) {
-                yield(runBlocking { channel.receive() })
-            }
-        } catch (closed: ClosedReceiveChannelException) {
-            // flow is completed -> swallow
-        } finally {
-            channel.cancel()
-        }
-    }
-}
+@DelicateCoroutinesApi
+public fun Sequence<String>.toRisRecords(scope: CoroutineScope = GlobalScope): Sequence<RisRecord> = mapSequence(KRis::process, scope)
 //endregion
 
 //region:export - RisRecords -> RISFile lines
@@ -75,30 +64,41 @@ public fun List<RisRecord>.toRisLines(sort: List<String> = emptyList()): List<St
     runBlocking { asFlow().toRisLines(sort).toList() }
 
 /**
- * Processes a sequence of [RisRecord]s into a sequence of Strings
- * representing lines in RIS file format.
+ * Processes a sequence of [RisRecord]s into a sequence of Strings representing lines in RIS file format.
+ */
+@FlowPreview
+@ExperimentalCoroutinesApi
+@DelicateCoroutinesApi
+public fun Sequence<RisRecord>.toRisLines(scope: CoroutineScope = GlobalScope): Sequence<String> = mapSequence(KRis::build, scope)
+//endregion
+
+/**
+ * Processes a sequence of type [T] into a sequence of type [R] using a [flowMapper]
+ * accepting a flow of type [T] and returning a flow of type [R].
  * Thanks to @jcornaz for the help.
  */
 @FlowPreview
 @ExperimentalCoroutinesApi
-public fun Sequence<RisRecord>.toRisLines(): Sequence<String> =
-    sequence {
-        val channel = KRis.build(asFlow()).produceIn(GlobalScope)
+private fun <T, R> Sequence<T>.mapSequence(
+    flowMapper: (Flow<T>) -> Flow<R>,
+    scope: CoroutineScope
+): Sequence<R> = sequence {
+    val sourceFlow: Flow<T> = this@mapSequence.asFlow()
+    val targetFlow: Flow<R> = flowMapper(sourceFlow)
 
-        try {
-            while (!channel.isClosedForReceive) {
-                yield(runBlocking { channel.receive() })
-            }
-        } catch (closed: ClosedReceiveChannelException) {
-            // flow is completed -> swallow
-        } catch (closed: ClosedChannelException) {
-            // flow is completed -> swallow
-        } finally {
-            channel.cancel()
+    val channel: ReceiveChannel<R> = targetFlow.produceIn(scope)
+    try {
+        while (!channel.isClosedForReceive) {
+            yield(runBlocking { channel.receive() })
         }
+    } catch (closed: ClosedReceiveChannelException) {
+        // flow is completed -> swallow
+    } catch (closed: ClosedChannelException) {
+        // flow is completed -> swallow
+    } finally {
+        channel.cancel()
     }
-
-//endregion
+}
 
 /**
  * List of the names of all [RisTag]s.

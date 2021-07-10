@@ -54,7 +54,7 @@ internal object RisImport {
         return tag
     }
 
-    private fun RisTag.typeSafeValueFrom(line: String): Any? {
+    private fun RisTag.typeSafeValueFrom(line: String): Any {
         val rawValue: String = line.substring(START_INDEX_VALUE).trim()
         return when (kClass) {
             RisType::class -> RisType.valueOf(rawValue)

@@ -6,6 +6,7 @@ import ch.difty.kris.domain.RisType
 import ch.difty.kris.risTagNames
 import ch.difty.kris.toRisLines
 import ch.difty.kris.toRisRecords
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -21,6 +22,7 @@ import org.spekframework.spek2.style.specification.describe
 /**
  * Specification how to use KRis from kotlin
  */
+@DelicateCoroutinesApi
 @ExperimentalCoroutinesApi
 @FlowPreview
 @Suppress("SpellCheckingInspection", "unused")

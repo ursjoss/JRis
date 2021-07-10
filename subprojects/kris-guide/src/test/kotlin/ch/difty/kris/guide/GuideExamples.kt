@@ -9,8 +9,10 @@ import ch.difty.kris.process
 import ch.difty.kris.risTagNames
 import ch.difty.kris.toRisLines
 import ch.difty.kris.toRisRecords
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
@@ -195,12 +197,13 @@ fun passRisLinesAsList() {
 
 @ExperimentalCoroutinesApi
 @FlowPreview
+@DelicateCoroutinesApi
 @Suppress("UNUSED_VARIABLE", "UNREACHABLE_CODE")
 fun passRisLinesAsSequence() {
     // tag::passRisLinesAsSequence[]
     val lineSequence: Sequence<String> = TODO()
 
-    val records: Sequence<RisRecord> = lineSequence.toRisRecords()
+    val records: Sequence<RisRecord> = lineSequence.toRisRecords(GlobalScope)
     // end::passRisLinesAsSequence[]
 }
 
